@@ -11,9 +11,6 @@ st.set_page_config(
 DATA_FILE = "عروض المؤتمر 2026.xlsx"
 GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz7dTqGUw95xDV2rVX6FbbcZM7H_LaJ-T83b1iYWYqrJ-Kq36gcFj3zD-kd-28jhsga/exec"
 
-# =========================
-# 🎨 CSS احترافي
-# =========================
 st.markdown("""
 <style>
 html, body {
@@ -21,44 +18,40 @@ html, body {
     text-align: right;
 }
 
-/* الجدول */
 .custom-table {
     width: 100%;
     border-collapse: collapse;
     margin-top: 20px;
+    border: 2px solid #9ca3af;
 }
 
-/* الهيدر */
 .custom-table th {
     background: #2563eb;
     color: white;
     font-size: 22px;
-    font-weight: bold;
-    padding: 14px;
+    font-weight: 900;
+    padding: 15px;
     text-align: center;
+    border: 1px solid #9ca3af;
 }
 
-/* الصفوف */
 .custom-table td {
-    font-size: 20px;
-    font-weight: bold;
-    padding: 14px;
+    font-size: 21px;
+    font-weight: 900;
+    padding: 15px;
     text-align: center;
+    border: 1px solid #cbd5e1;
+    color: #111827;
 }
 
-/* صف أبيض */
 .custom-table tr:nth-child(even) td {
     background: #ffffff;
-    color: #111827;
 }
 
-/* صف رمادي */
 .custom-table tr:nth-child(odd) td {
-    background: #f3f4f6;
-    color: #111827;
+    background: #e5e7eb;
 }
 
-/* hover */
 .custom-table tr:hover td {
     background: #dbeafe;
 }
@@ -66,9 +59,6 @@ html, body {
 """, unsafe_allow_html=True)
 
 
-# =========================
-# 📊 تحميل البيانات
-# =========================
 @st.cache_data
 def load_data():
     df = pd.read_excel(DATA_FILE)
@@ -82,9 +72,30 @@ def load_data():
 
 
 def clean(x):
-    if pd.isna(x) or str(x).lower() in ["none", "nan"]:
+    if pd.isna(x) or str(x).lower() in ["none", "nan", "nat"]:
         return ""
     return x
+
+
+def format_value(x, col_name=""):
+    x = clean(x)
+    if x == "":
+        return ""
+
+    if isinstance(x, (int, float)):
+        if ("حسم" in col_name) or ("discount" in col_name) or ("نسبة" in col_name):
+            if 0 < x <= 1:
+                return f"{x:.0%}"
+            return f"{x}%"
+
+        if float(x).is_integer():
+            if abs(x) >= 1000:
+                return f"{x:,.0f}"
+            return f"{x:.0f}"
+
+        return f"{x:,.2f}"
+
+    return str(x)
 
 
 df = load_data()
@@ -92,16 +103,12 @@ df = load_data()
 if "page" not in st.session_state:
     st.session_state.page = "filters"
 
-# تحديث
 if st.button("🔄 تحديث البيانات"):
     st.cache_data.clear()
     st.rerun()
 
-# =========================
-# شاشة الفلاتر
-# =========================
-if st.session_state.page == "filters":
 
+if st.session_state.page == "filters":
     st.title("💊 نظام عروض مؤتمر الصيادلة")
 
     col1, col2 = st.columns(2)
@@ -120,11 +127,8 @@ if st.session_state.page == "filters":
         st.session_state.page = "details"
         st.rerun()
 
-# =========================
-# شاشة التفاصيل
-# =========================
-else:
 
+else:
     selected_type = st.session_state.selected_type
     selected_group = st.session_state.selected_group
 
@@ -133,23 +137,8 @@ else:
         (df["offer_group"] == selected_group)
     ].copy()
 
-    # تنظيف
     result = result.fillna("")
     result = result.loc[:, ~result.columns.str.contains("unnamed", case=False)]
-
-    # تحويل النسب
-    for col in result.columns:
-        if "حسم" in col or "discount" in col or "نسبة" in col:
-            result[col] = result[col].apply(
-                lambda x: f"{x:.0%}" if isinstance(x, (int, float)) and 0 < x <= 1 else x
-            )
-
-    # تنسيق الأرقام
-    for col in result.columns:
-        if "قيمة" in col or "سعر" in col or "value" in col:
-            result[col] = result[col].apply(
-                lambda x: f"{x:,.0f}" if isinstance(x, (int, float)) else x
-            )
 
     st.subheader(f"💊 {selected_type} / {selected_group}")
 
@@ -159,32 +148,29 @@ else:
 
     st.divider()
 
-    # =========================
-    # 🔥 بناء الجدول HTML
-    # =========================
     headers = result.columns.tolist()
-
     rows_html = ""
 
     for _, row in result.iterrows():
         row_html = "<tr>"
         for col in headers:
-            row_html += f"<td>{clean(row[col])}</td>"
+            value = format_value(row[col], col)
+            row_html += f"<td>{value}</td>"
         row_html += "</tr>"
         rows_html += row_html
 
     table_html = f"""
-    <table class="custom-table">
-    <thead>
-    <tr>
-    {''.join([f"<th>{col}</th>" for col in headers])}
-    </tr>
-    </thead>
-    <tbody>
-    {rows_html}
-    </tbody>
-    </table>
-    """
+<table class="custom-table">
+<thead>
+<tr>
+{''.join([f"<th>{col}</th>" for col in headers])}
+</tr>
+</thead>
+<tbody>
+{rows_html}
+</tbody>
+</table>
+"""
 
     st.markdown(table_html, unsafe_allow_html=True)
 
@@ -192,7 +178,6 @@ else:
     st.subheader("تثبيت العرض")
 
     with st.form("form"):
-
         c1, c2, c3 = st.columns(3)
 
         with c1:
