@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import requests
-from datetime import datetime
 
 st.set_page_config(
     page_title="عروض المؤتمر",
@@ -25,9 +24,23 @@ html, body, [class*="css"] {
     background: #ffffff;
     border: 1px solid #e5e7eb;
     border-radius: 18px;
-    padding: 20px;
+    padding: 18px;
     margin-bottom: 16px;
-    box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+    min-height: 170px;
+}
+.offer-box h3 {
+    color: #0f172a;
+    font-size: 22px;
+    margin-bottom: 12px;
+}
+.offer-line {
+    font-size: 17px;
+    color: #334155;
+    margin: 6px 0;
+}
+.offer-label {
+    color: #64748b;
 }
 .title {
     font-size: 34px;
@@ -41,6 +54,7 @@ html, body, [class*="css"] {
 }
 </style>
 """, unsafe_allow_html=True)
+
 
 @st.cache_data
 def load_data():
@@ -58,6 +72,7 @@ def load_data():
     df["offer_group"] = df["offer_group"].astype(str).str.strip()
     return df
 
+
 df = load_data()
 
 if "page" not in st.session_state:
@@ -66,6 +81,7 @@ if "page" not in st.session_state:
 if st.button("🔄 تحديث بيانات العروض"):
     st.cache_data.clear()
     st.rerun()
+
 
 # =========================
 # شاشة اختيار العرض
@@ -96,6 +112,7 @@ if st.session_state.page == "filters":
         st.session_state.page = "details"
         st.rerun()
 
+
 # =========================
 # شاشة تفاصيل العرض
 # =========================
@@ -108,6 +125,9 @@ elif st.session_state.page == "details":
         (df["offer_group"] == selected_group)
     ].copy()
 
+    result = result.fillna("")
+    result = result.loc[:, ~result.columns.str.contains("unnamed", case=False)]
+
     top1, top2 = st.columns([1, 4])
 
     with top1:
@@ -116,17 +136,61 @@ elif st.session_state.page == "details":
             st.rerun()
 
     with top2:
-        st.markdown(f'<div class="title">تفاصيل العرض: {selected_type} / {selected_group}</div>', unsafe_allow_html=True)
+        st.markdown(
+            f'<div class="title">تفاصيل العرض: {selected_type} / {selected_group}</div>',
+            unsafe_allow_html=True
+        )
 
     st.divider()
 
-    show_cols = [c for c in result.columns if c not in ["id"]]
+    st.markdown("### 📦 المنتجات ضمن العرض")
 
-    st.dataframe(
-        result[show_cols],
-        use_container_width=True,
-        hide_index=True
-    )
+    cols = st.columns(2)
+
+    for i, (_, row) in enumerate(result.iterrows()):
+        col = cols[i % 2]
+
+        product = (
+            row.get("product", "")
+            or row.get("اسم_المستحضر", "")
+            or row.get("العرض_او_الحسم", "")
+        )
+
+        qty = (
+            row.get("qty", "")
+            or row.get("عدد_القطع", "")
+            or row.get("كمية_العرض", "")
+            or row.get("كمية_العرض_", "")
+        )
+
+        gift = (
+            row.get("bonus_qty", "")
+            or row.get("البونص", "")
+            or row.get("الهدية", "")
+        )
+
+        discount = (
+            row.get("discount", "")
+            or row.get("الحسم", "")
+            or row.get("العرض_او_الحسم", "")
+        )
+
+        value = (
+            row.get("قيمة_العرض", "")
+            or row.get("value", "")
+            or row.get("السعر", "")
+        )
+
+        with col:
+            st.markdown(f"""
+            <div class="offer-box">
+                <h3>💊 {product}</h3>
+                <div class="offer-line"><span class="offer-label">📦 الكمية:</span> <b>{qty}</b></div>
+                <div class="offer-line"><span class="offer-label">🎁 الهدية:</span> <b>{gift}</b></div>
+                <div class="offer-line"><span class="offer-label">💰 الحسم:</span> <b>{discount}</b></div>
+                <div class="offer-line"><span class="offer-label">💵 قيمة العرض:</span> <b>{value}</b></div>
+            </div>
+            """, unsafe_allow_html=True)
 
     st.divider()
     st.subheader("تثبيت العرض")
@@ -147,7 +211,7 @@ elif st.session_state.page == "details":
 
         if submitted:
             if not doctor_name and not pharmacy_name:
-                st.warning("يرجى إدخال اسم الصيدلي/الدكتور أو اسم الصيدلية.")
+                st.warning("يرجى إدخال اسم الصيدلي/الدكتور أو العنوان.")
             else:
                 payload = {
                     "doctor_name": doctor_name,
