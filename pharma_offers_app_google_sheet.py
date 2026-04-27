@@ -12,33 +12,59 @@ DATA_FILE = "عروض المؤتمر 2026.xlsx"
 GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz7dTqGUw95xDV2rVX6FbbcZM7H_LaJ-T83b1iYWYqrJ-Kq36gcFj3zD-kd-28jhsga/exec"
 
 # =========================
-# 🎨 CSS
+# 🎨 CSS احترافي
 # =========================
 st.markdown("""
 <style>
-html, body, [class*="css"] {
+html, body {
     direction: rtl;
     text-align: right;
 }
 
-.title {
-    font-size: 30px;
+/* الجدول */
+.custom-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+/* الهيدر */
+.custom-table th {
+    background: #2563eb;
+    color: white;
+    font-size: 22px;
     font-weight: bold;
+    padding: 14px;
+    text-align: center;
 }
 
-.subtitle {
-    color: #aaa;
-    margin-bottom: 20px;
+/* الصفوف */
+.custom-table td {
+    font-size: 20px;
+    font-weight: bold;
+    padding: 14px;
+    text-align: center;
 }
 
-[data-testid="stDataFrame"] {
-    font-size: 20px !important;
+/* صف أبيض */
+.custom-table tr:nth-child(even) td {
+    background: #ffffff;
+    color: #111827;
 }
-[data-testid="stDataFrame"] div {
-    font-size: 18px !important;
+
+/* صف رمادي */
+.custom-table tr:nth-child(odd) td {
+    background: #f3f4f6;
+    color: #111827;
+}
+
+/* hover */
+.custom-table tr:hover td {
+    background: #dbeafe;
 }
 </style>
 """, unsafe_allow_html=True)
+
 
 # =========================
 # 📊 تحميل البيانات
@@ -53,6 +79,13 @@ def load_data():
     df["offer_group"] = df["offer_group"].astype(str)
 
     return df
+
+
+def clean(x):
+    if pd.isna(x) or str(x).lower() in ["none", "nan"]:
+        return ""
+    return x
+
 
 df = load_data()
 
@@ -69,8 +102,7 @@ if st.button("🔄 تحديث البيانات"):
 # =========================
 if st.session_state.page == "filters":
 
-    st.markdown('<div class="title">💊 نظام عروض مؤتمر الصيادلة</div>', unsafe_allow_html=True)
-    st.markdown('<div class="subtitle">اختر العرض لعرض التفاصيل</div>', unsafe_allow_html=True)
+    st.title("💊 نظام عروض مؤتمر الصيادلة")
 
     col1, col2 = st.columns(2)
 
@@ -101,29 +133,25 @@ else:
         (df["offer_group"] == selected_group)
     ].copy()
 
-    # 🧼 تنظيف
+    # تنظيف
     result = result.fillna("")
     result = result.loc[:, ~result.columns.str.contains("unnamed", case=False)]
 
-    # =========================
-    # 🔥 تحويل النسب
-    # =========================
+    # تحويل النسب
     for col in result.columns:
         if "حسم" in col or "discount" in col or "نسبة" in col:
             result[col] = result[col].apply(
                 lambda x: f"{x:.0%}" if isinstance(x, (int, float)) and 0 < x <= 1 else x
             )
 
-    # =========================
-    # 💰 تنسيق الأرقام
-    # =========================
+    # تنسيق الأرقام
     for col in result.columns:
-        if "قيمة" in col or "سعر" in col or "price" in col or "value" in col:
+        if "قيمة" in col or "سعر" in col or "value" in col:
             result[col] = result[col].apply(
                 lambda x: f"{x:,.0f}" if isinstance(x, (int, float)) else x
             )
 
-    st.markdown(f"### 💊 {selected_type} / {selected_group}")
+    st.subheader(f"💊 {selected_type} / {selected_group}")
 
     if st.button("⬅️ رجوع"):
         st.session_state.page = "filters"
@@ -132,14 +160,33 @@ else:
     st.divider()
 
     # =========================
-    # 📊 عرض الجدول
+    # 🔥 بناء الجدول HTML
     # =========================
-    st.dataframe(
-        result,
-        use_container_width=True,
-        hide_index=True,
-        height=520
-    )
+    headers = result.columns.tolist()
+
+    rows_html = ""
+
+    for _, row in result.iterrows():
+        row_html = "<tr>"
+        for col in headers:
+            row_html += f"<td>{clean(row[col])}</td>"
+        row_html += "</tr>"
+        rows_html += row_html
+
+    table_html = f"""
+    <table class="custom-table">
+    <thead>
+    <tr>
+    {''.join([f"<th>{col}</th>" for col in headers])}
+    </tr>
+    </thead>
+    <tbody>
+    {rows_html}
+    </tbody>
+    </table>
+    """
+
+    st.markdown(table_html, unsafe_allow_html=True)
 
     st.divider()
     st.subheader("تثبيت العرض")
