@@ -114,7 +114,10 @@ if st.session_state.page == "filters":
     col1, col2 = st.columns(2)
 
     with col1:
-        offer_type = st.selectbox("نوع العرض", sorted(df["offer_type"].unique()))
+offer_type = st.selectbox(
+    "نوع العرض",
+    sorted(df["offer_type"].unique())
+)
 
     filtered = df[df["offer_type"] == offer_type]
 
