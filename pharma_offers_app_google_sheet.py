@@ -9,12 +9,12 @@ st.set_page_config(
 )
 
 DATA_FILE = "عروض المؤتمر 2026.xlsx"
-GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz7dTqGUw95xDV2rVX6FbbcZM7H_LaJ-T83b1iYWYqrJ-Kq36gcFj3zD-kd-28jhsga/exec"
+GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzNnX--BElICEiGzpUV0mXC-9B1EM5NItWfvoGjV9AMVlZ1oeir39IlhAd_yvaLyCBR/exec"
 
 USERS = {
     "Manar": "123",
-    "Ruba": "123",
-    "Alaa": "123"
+    "Ruba": "0123",
+    "Alaa": "1234"
 }
 
 st.markdown("""
@@ -255,7 +255,7 @@ else:
                 try:
                     r = requests.post(GOOGLE_SCRIPT_URL, json=payload, timeout=15)
                     if r.status_code == 200:
-                        st.success("تم الحفظ ✅")
+                        st.success(f"تم الحفظ باسم الموظف {st.session_state.employee} ✅")
                     else:
                         st.error("خطأ بالحفظ")
                 except Exception as e:
