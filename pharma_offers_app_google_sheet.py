@@ -30,65 +30,33 @@ html, body, [class*="css"] {
     padding: 28px;
     margin-bottom: 22px;
     color: white;
-    box-shadow: 0 18px 45px rgba(0,0,0,0.28);
 }
 .hero-title {
     font-size: 38px;
     font-weight: 900;
-    margin-bottom: 8px;
 }
 .hero-subtitle {
     font-size: 18px;
-    opacity: 0.92;
-}
-.filter-card {
-    background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,255,255,0.16);
-    border-radius: 24px;
-    padding: 22px;
-    margin-bottom: 22px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.18);
 }
 .section-title {
     color: #f8fafc;
     font-size: 25px;
     font-weight: 800;
-    margin: 12px 0 18px;
+    margin: 20px 0 15px;
 }
 .offer-box {
     background: #ffffff;
     border-radius: 24px;
-    padding: 22px;
+    padding: 24px;
     margin-bottom: 18px;
     box-shadow: 0 14px 34px rgba(0,0,0,0.18);
-    min-height: 220px;
     border-top: 6px solid #2563eb;
 }
 .offer-product {
     color: #0f172a;
-    font-size: 23px;
+    font-size: 24px;
     font-weight: 900;
-    margin-bottom: 16px;
-}
-.offer-row {
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 9px 0;
-    border-bottom: 1px solid #e5e7eb;
-    color: #334155;
-    font-size: 16px;
-}
-.offer-row:last-child {
-    border-bottom: none;
-}
-.offer-label {
-    color: #64748b;
-    font-weight: 700;
-}
-.offer-value {
-    color: #0f172a;
-    font-weight: 900;
+    margin-bottom: 15px;
 }
 .badge {
     display: inline-block;
@@ -98,6 +66,24 @@ html, body, [class*="css"] {
     padding: 6px 12px;
     font-weight: 800;
     margin-bottom: 12px;
+}
+.offer-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+.offer-table th {
+    background: #f1f5f9;
+    color: #0f172a;
+    padding: 12px;
+    font-size: 15px;
+    border-bottom: 1px solid #e2e8f0;
+}
+.offer-table td {
+    color: #0f172a;
+    padding: 12px;
+    font-size: 15px;
+    border-bottom: 1px solid #e2e8f0;
 }
 .form-box {
     background: rgba(255,255,255,0.10);
@@ -174,8 +160,6 @@ if st.session_state.page == "filters":
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown('<div class="filter-card">', unsafe_allow_html=True)
-
     col1, col2 = st.columns(2)
 
     with col1:
@@ -197,8 +181,6 @@ if st.session_state.page == "filters":
         st.session_state.selected_group = offer_group
         st.session_state.page = "details"
         st.rerun()
-
-    st.markdown('</div>', unsafe_allow_html=True)
 
 
 # =========================
@@ -227,81 +209,66 @@ elif st.session_state.page == "details":
         st.markdown(f"""
         <div class="hero">
             <div class="hero-title">{selected_type} / {selected_group}</div>
-            <div class="hero-subtitle">تفاصيل المنتجات المرتبطة بهذا العرض</div>
+            <div class="hero-subtitle">تفاصيل العرض المحدد</div>
         </div>
         """, unsafe_allow_html=True)
 
-    st.markdown('<div class="section-title">📦 المنتجات ضمن العرض</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">📦 تفاصيل العرض</div>', unsafe_allow_html=True)
 
-    cols = st.columns(2)
+    products_rows = ""
 
-    for i, (_, row) in enumerate(result.iterrows()):
-        col = cols[i % 2]
-
+    for _, row in result.iterrows():
         product = get_first_value(row, [
-            "product",
-            "اسم_المستحضر",
-            "المستحضر",
-            "الصنف",
-            "العرض_او_الحسم"
+            "product", "اسم_المستحضر", "المستحضر", "الصنف", "العرض_او_الحسم"
         ])
 
         qty = get_first_value(row, [
-            "qty",
-            "عدد_القطع",
-            "كمية_العرض",
-            "كمية_العرض_",
-            "الكمية"
+            "qty", "عدد_القطع", "كمية_العرض", "كمية_العرض_", "الكمية"
         ])
 
         gift = get_first_value(row, [
-            "bonus_qty",
-            "البونص",
-            "الهدية",
-            "gift"
+            "bonus_qty", "البونص", "الهدية", "gift"
         ])
 
         discount = get_first_value(row, [
-            "discount",
-            "الحسم",
-            "نسبة_الحسم",
-            "العرض_او_الحسم"
+            "discount", "الحسم", "نسبة_الحسم"
         ])
 
         value = get_first_value(row, [
-            "قيمة_العرض",
-            "value",
-            "السعر",
-            "القيمة"
+            "قيمة_العرض", "value", "السعر", "القيمة", "الهدية"
         ])
 
-        with col:
-            st.markdown(f"""
-            <div class="offer-box">
-                <div class="badge">عرض مؤتمر</div>
-                <div class="offer-product">💊 {product}</div>
+        products_rows += f"""
+        <tr>
+            <td>{product}</td>
+            <td>{qty}</td>
+            <td>{gift}</td>
+            <td>{discount}</td>
+            <td>{value}</td>
+        </tr>
+        """
 
-                <div class="offer-row">
-                    <span class="offer-label">📦 الكمية</span>
-                    <span class="offer-value">{qty}</span>
-                </div>
+    st.markdown(f"""
+    <div class="offer-box">
+        <div class="badge">عرض مؤتمر</div>
+        <div class="offer-product">💊 {selected_type} / {selected_group}</div>
 
-                <div class="offer-row">
-                    <span class="offer-label">🎁 الهدية</span>
-                    <span class="offer-value">{gift}</span>
-                </div>
-
-                <div class="offer-row">
-                    <span class="offer-label">💰 الحسم</span>
-                    <span class="offer-value">{discount}</span>
-                </div>
-
-                <div class="offer-row">
-                    <span class="offer-label">💵 قيمة العرض</span>
-                    <span class="offer-value">{value}</span>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+        <table class="offer-table">
+            <thead>
+                <tr>
+                    <th>المستحضر</th>
+                    <th>الكمية</th>
+                    <th>الهدية</th>
+                    <th>الحسم</th>
+                    <th>القيمة</th>
+                </tr>
+            </thead>
+            <tbody>
+                {products_rows}
+            </tbody>
+        </table>
+    </div>
+    """, unsafe_allow_html=True)
 
     st.markdown('<div class="form-box">', unsafe_allow_html=True)
     st.subheader("✅ تثبيت العرض")
