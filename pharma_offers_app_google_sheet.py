@@ -133,11 +133,11 @@ elif st.session_state.page == "details":
         with c1:
             doctor_name = st.text_input("اسم الصيدلي / الدكتور")
         with c2:
-            pharmacy_name = st.text_input("اسم الصيدلية")
+            pharmacy_name = st.text_input("العنوان")
         with c3:
             phone = st.text_input("رقم الهاتف")
 
-        notes = st.text_area("ملاحظات", height=80)
+        notes = st.text_area("تثبيت العرض :", height=80)
 
         submitted = st.form_submit_button("✅ تثبيت العرض", use_container_width=True)
 
