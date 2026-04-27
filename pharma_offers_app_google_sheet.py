@@ -63,6 +63,10 @@ df = load_data()
 if "page" not in st.session_state:
     st.session_state.page = "filters"
 
+if st.button("🔄 تحديث بيانات العروض"):
+    st.cache_data.clear()
+    st.rerun()
+
 # =========================
 # شاشة اختيار العرض
 # =========================
