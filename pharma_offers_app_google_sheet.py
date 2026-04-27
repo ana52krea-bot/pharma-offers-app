@@ -106,11 +106,42 @@ else:
     st.divider()
 
     # عرض الجدول (بسيط وواضح)
-    st.dataframe(
-        result,
-        use_container_width=True,
-        hide_index=True
-    )
+# تنظيف الأعمدة الفارغة مثل unnamed
+result = result.loc[:, ~result.columns.str.contains("unnamed", case=False)]
+
+# تحويل النِسب: 0.43 -> 43%
+for col in result.columns:
+    if "حسم" in col or "discount" in col.lower() or "نسبة" in col:
+        result[col] = result[col].apply(
+            lambda x: f"{x:.0%}" if isinstance(x, (int, float)) and 0 < x <= 1 else x
+        )
+
+# تنسيق الأرقام الكبيرة
+for col in result.columns:
+    if "قيمة" in col or "سعر" in col or "price" in col.lower() or "value" in col.lower():
+        result[col] = result[col].apply(
+            lambda x: f"{x:,.0f}" if isinstance(x, (int, float)) else x
+        )
+
+result = result.fillna("")
+
+st.markdown("""
+<style>
+[data-testid="stDataFrame"] {
+    font-size: 20px !important;
+}
+[data-testid="stDataFrame"] div {
+    font-size: 18px !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+st.dataframe(
+    result,
+    use_container_width=True,
+    hide_index=True,
+    height=520
+)
 
     st.divider()
     st.subheader("تثبيت العرض")
