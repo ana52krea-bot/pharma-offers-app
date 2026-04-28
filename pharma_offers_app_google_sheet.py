@@ -194,7 +194,7 @@ if st.button("تسجيل خروج"):
 
 if st.session_state.page == "filters":
 
-    st.title("💊 2026 عروض مؤتمر الصيادلة")
+    st.title("💊 عروض مؤتمر الصيادلة 2026")
 
     col1, col2 = st.columns(2)
 
