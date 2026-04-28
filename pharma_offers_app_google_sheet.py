@@ -47,7 +47,7 @@ html, body {
 }
 
 .table-wrapper {
-    max-height: 480px;
+    max-height: 380px;
     overflow-y: auto;
     overflow-x: auto;
     border: 2px solid #9ca3af;
