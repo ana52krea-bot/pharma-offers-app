@@ -161,7 +161,7 @@ if not st.session_state.logged_in:
     st.title("🔐 تسجيل الدخول")
 
     username = st.selectbox("USER", list(USERS.keys()))
-    password = st.text_input("كلمة المرور", type="password")
+    password = st.text_input("password", type="password")
 
     if st.button("دخول", use_container_width=True):
         if USERS.get(username) == password:
@@ -183,7 +183,7 @@ if st.button("🔄 تحديث البيانات"):
     st.cache_data.clear()
     st.rerun()
 
-st.write(f"👤 الموظف الحالي: **{st.session_state.employee}**")
+st.write(f"👤 USER : **{st.session_state.employee}**")
 
 if st.button("تسجيل خروج"):
     st.session_state.logged_in = False
