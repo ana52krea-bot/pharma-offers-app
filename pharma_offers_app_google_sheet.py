@@ -27,48 +27,59 @@ html, body {
 .summary-box {
     background: #ffffff;
     color: #111827;
-    border-radius: 18px;
-    padding: 18px;
+    border-radius: 16px;
+    padding: 12px;
     border: 2px solid #2563eb;
     text-align: center;
     font-weight: 900;
-    margin-bottom: 18px;
+    margin-bottom: 14px;
 }
 
 .summary-title {
-    font-size: 18px;
+    font-size: 15px;
     color: #2563eb;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
 }
 
 .summary-value {
-    font-size: 28px;
+    font-size: 24px;
     color: #111827;
+}
+
+.table-wrapper {
+    max-height: 480px;
+    overflow-y: auto;
+    overflow-x: auto;
+    border: 2px solid #9ca3af;
+    margin-top: 18px;
 }
 
 .custom-table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 20px;
-    border: 2px solid #9ca3af;
 }
 
-.custom-table th {
+.custom-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
     background: #2563eb;
     color: white;
-    font-size: 22px;
+    font-size: 18px;
     font-weight: 900;
-    padding: 15px;
+    padding: 8px;
     text-align: center;
+    border: 1px solid #9ca3af;
 }
 
 .custom-table td {
-    font-size: 21px;
-    font-weight: 900;
-    padding: 15px;
+    font-size: 17px;
+    font-weight: 700;
+    padding: 7px;
     text-align: center;
     border: 1px solid #cbd5e1;
     color: #111827;
+    line-height: 1.25;
 }
 
 .custom-table tr:nth-child(even) td {
@@ -77,6 +88,10 @@ html, body {
 
 .custom-table tr:nth-child(odd) td {
     background: #e5e7eb;
+}
+
+.custom-table tr:hover td {
+    background: #dbeafe;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -262,7 +277,21 @@ else:
     if len(table_result) > 1 and is_summary_row(table_result.iloc[0]):
         table_result = table_result.iloc[1:].copy()
 
-    table_result = table_result.drop(columns=["offer_type", "offer_group"], errors="ignore")
+    # إخفاء الأعمدة غير المطلوبة من الجدول
+    table_result = table_result.drop(
+        columns=[
+            "offer_type",
+            "offer_group",
+            "عدد_النقاط"
+        ],
+        errors="ignore"
+    )
+
+    # إخفاء أي عمود يحتوي كلمة نقاط احتياطياً
+    table_result = table_result.drop(
+        columns=[col for col in table_result.columns if "نقاط" in col or "points" in col.lower()],
+        errors="ignore"
+    )
 
     headers = table_result.columns.tolist()
     rows_html = ""
@@ -276,6 +305,7 @@ else:
         rows_html += row_html
 
     table_html = f"""
+<div class="table-wrapper">
 <table class="custom-table">
 <thead>
 <tr>
@@ -286,6 +316,7 @@ else:
 {rows_html}
 </tbody>
 </table>
+</div>
 """
 
     st.markdown(table_html, unsafe_allow_html=True)
