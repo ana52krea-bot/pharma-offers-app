@@ -85,7 +85,24 @@ html, body {
 
 @st.cache_data
 def load_data():
-    df = pd.read_excel(DATA_FILE)
+    raw = pd.read_excel(DATA_FILE, header=None)
+
+    header_row = None
+
+    for i in range(min(10, len(raw))):
+        row_values = raw.iloc[i].astype(str).str.strip().str.lower().str.replace(" ", "_").tolist()
+
+        if "offer_type" in row_values and "offer_group" in row_values:
+            header_row = i
+            break
+
+    if header_row is None:
+        st.error("لم أجد صف يحتوي على offer_type و offer_group داخل ملف الإكسل.")
+        st.write("أول 10 صفوف من الملف:")
+        st.dataframe(raw.head(10))
+        st.stop()
+
+    df = pd.read_excel(DATA_FILE, header=header_row)
 
     df.columns = (
         df.columns.astype(str)
@@ -94,24 +111,6 @@ def load_data():
         .str.replace(" ", "_")
         .str.replace("-", "_")
     )
-
-    rename_map = {}
-
-    for col in df.columns:
-        clean_col = col.replace("_", "").replace(" ", "").lower()
-
-        if clean_col in ["offertype", "نوعالعرض"]:
-            rename_map[col] = "offer_type"
-
-        if clean_col in ["offergroup", "مجموعةالعرض", "رقمالعرض"]:
-            rename_map[col] = "offer_group"
-
-    df = df.rename(columns=rename_map)
-
-    if "offer_type" not in df.columns or "offer_group" not in df.columns:
-        st.error("لازم يكون عندك عمودين باسم: offer_type و offer_group")
-        st.write("الأعمدة الموجودة حالياً:", list(df.columns))
-        st.stop()
 
     df = df.dropna(how="all")
 
