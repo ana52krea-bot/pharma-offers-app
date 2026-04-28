@@ -121,8 +121,10 @@ def format_value(x, col_name=""):
     if x == "":
         return ""
 
+    percent_cols = ["حسم", "discount", "نسبة", "العرض"]
+
     if isinstance(x, (int, float)):
-        if "حسم" in col_name or "discount" in col_name or "نسبة" in col_name:
+        if any(word in col_name for word in percent_cols):
             if 0 < x <= 1:
                 return f"{x:.0%}"
             return f"{x}%"
