@@ -23,12 +23,36 @@ html, body {
     direction: rtl;
     text-align: right;
 }
+
+.summary-box {
+    background: #ffffff;
+    color: #111827;
+    border-radius: 18px;
+    padding: 18px;
+    border: 2px solid #2563eb;
+    text-align: center;
+    font-weight: 900;
+    margin-bottom: 18px;
+}
+
+.summary-title {
+    font-size: 18px;
+    color: #2563eb;
+    margin-bottom: 8px;
+}
+
+.summary-value {
+    font-size: 28px;
+    color: #111827;
+}
+
 .custom-table {
     width: 100%;
     border-collapse: collapse;
     margin-top: 20px;
     border: 2px solid #9ca3af;
 }
+
 .custom-table th {
     background: #2563eb;
     color: white;
@@ -37,6 +61,7 @@ html, body {
     padding: 15px;
     text-align: center;
 }
+
 .custom-table td {
     font-size: 21px;
     font-weight: 900;
@@ -45,9 +70,11 @@ html, body {
     border: 1px solid #cbd5e1;
     color: #111827;
 }
+
 .custom-table tr:nth-child(even) td {
     background: #ffffff;
 }
+
 .custom-table tr:nth-child(odd) td {
     background: #e5e7eb;
 }
@@ -95,9 +122,19 @@ def format_value(x, col_name=""):
     return str(x)
 
 
-# =========================
-# تسجيل الدخول
-# =========================
+def is_summary_row(row):
+    text_cols = ["العرض_و_الحسم", "product", "المستحضر", "الصنف"]
+    has_product_text = False
+
+    for col in text_cols:
+        if col in row.index:
+            value = clean(row[col])
+            if value != "" and not isinstance(value, (int, float)):
+                has_product_text = True
+
+    return not has_product_text
+
+
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
@@ -139,9 +176,6 @@ if st.button("تسجيل خروج"):
     st.rerun()
 
 
-# =========================
-# شاشة الفلاتر
-# =========================
 if st.session_state.page == "filters":
 
     st.title("💊 نظام عروض مؤتمر الصيادلة")
@@ -169,9 +203,6 @@ if st.session_state.page == "filters":
         st.rerun()
 
 
-# =========================
-# شاشة التفاصيل
-# =========================
 else:
 
     selected_type = st.session_state.selected_type
@@ -193,10 +224,50 @@ else:
 
     st.divider()
 
-    headers = result.columns.tolist()
+    # =========================
+    # ملخص القيم المالية
+    # =========================
+    summary_row = result.iloc[0]
+
+    summary_items = []
+
+    for col in result.columns:
+        if col in ["offer_type", "offer_group"]:
+            continue
+
+        value = clean(summary_row[col])
+
+        if value != "":
+            summary_items.append((col, format_value(value, col)))
+
+    if summary_items:
+        st.markdown("### 💰 ملخص العرض")
+
+        cols = st.columns(min(len(summary_items), 4))
+
+        for i, (label, value) in enumerate(summary_items):
+            with cols[i % len(cols)]:
+                st.markdown(f"""
+                <div class="summary-box">
+                    <div class="summary-title">{label}</div>
+                    <div class="summary-value">{value}</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+    # =========================
+    # جدول التفاصيل
+    # =========================
+    table_result = result.copy()
+
+    if len(table_result) > 1 and is_summary_row(table_result.iloc[0]):
+        table_result = table_result.iloc[1:].copy()
+
+    table_result = table_result.drop(columns=["offer_type", "offer_group"], errors="ignore")
+
+    headers = table_result.columns.tolist()
     rows_html = ""
 
-    for _, row in result.iterrows():
+    for _, row in table_result.iterrows():
         row_html = "<tr>"
         for col in headers:
             value = format_value(row[col], col)
