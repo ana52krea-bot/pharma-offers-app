@@ -60,6 +60,7 @@ html, body {
     font-weight: 900;
     padding: 15px;
     text-align: center;
+    border: 1px solid #9ca3af;
 }
 
 .custom-table td {
@@ -85,7 +86,33 @@ html, body {
 @st.cache_data
 def load_data():
     df = pd.read_excel(DATA_FILE)
-    df.columns = df.columns.astype(str).str.strip().str.lower().str.replace(" ", "_")
+
+    df.columns = (
+        df.columns.astype(str)
+        .str.strip()
+        .str.lower()
+        .str.replace(" ", "_")
+        .str.replace("-", "_")
+    )
+
+    rename_map = {}
+
+    for col in df.columns:
+        clean_col = col.replace("_", "").replace(" ", "").lower()
+
+        if clean_col in ["offertype", "نوعالعرض"]:
+            rename_map[col] = "offer_type"
+
+        if clean_col in ["offergroup", "مجموعةالعرض", "رقمالعرض"]:
+            rename_map[col] = "offer_group"
+
+    df = df.rename(columns=rename_map)
+
+    if "offer_type" not in df.columns or "offer_group" not in df.columns:
+        st.error("لازم يكون عندك عمودين باسم: offer_type و offer_group")
+        st.write("الأعمدة الموجودة حالياً:", list(df.columns))
+        st.stop()
+
     df = df.dropna(how="all")
 
     df["offer_type"] = df["offer_type"].astype(str).fillna("").str.strip()
@@ -123,18 +150,22 @@ def format_value(x, col_name=""):
 
 
 def is_summary_row(row):
-    text_cols = ["العرض_و_الحسم", "product", "المستحضر", "الصنف"]
+    text_cols = ["العرض_و_الحسم", "العرض_او_الحسم", "product", "المستحضر", "الصنف"]
+
     has_product_text = False
 
     for col in text_cols:
         if col in row.index:
             value = clean(row[col])
-            if value != "" and not isinstance(value, (int, float)):
+            if value != "":
                 has_product_text = True
 
     return not has_product_text
 
 
+# =========================
+# تسجيل الدخول
+# =========================
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
@@ -176,6 +207,9 @@ if st.button("تسجيل خروج"):
     st.rerun()
 
 
+# =========================
+# شاشة الفلاتر
+# =========================
 if st.session_state.page == "filters":
 
     st.title("💊 نظام عروض مؤتمر الصيادلة")
@@ -203,6 +237,9 @@ if st.session_state.page == "filters":
         st.rerun()
 
 
+# =========================
+# شاشة التفاصيل
+# =========================
 else:
 
     selected_type = st.session_state.selected_type
@@ -228,7 +265,6 @@ else:
     # ملخص القيم المالية
     # =========================
     summary_row = result.iloc[0]
-
     summary_items = []
 
     for col in result.columns:
@@ -255,7 +291,7 @@ else:
                 """, unsafe_allow_html=True)
 
     # =========================
-    # جدول التفاصيل
+    # جدول التفاصيل بدون offer_type و offer_group
     # =========================
     table_result = result.copy()
 
