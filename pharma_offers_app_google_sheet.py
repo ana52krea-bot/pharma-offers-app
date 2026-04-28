@@ -160,7 +160,7 @@ if "employee" not in st.session_state:
 if not st.session_state.logged_in:
     st.title("🔐 تسجيل الدخول")
 
-    username = st.selectbox("اسم الموظف", list(USERS.keys()))
+    username = st.selectbox("USER", list(USERS.keys()))
     password = st.text_input("كلمة المرور", type="password")
 
     if st.button("دخول", use_container_width=True):
