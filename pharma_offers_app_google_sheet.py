@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import requests
-from datetime import datetime
 
 st.set_page_config(
     page_title="عروض المؤتمر",
@@ -10,37 +9,78 @@ st.set_page_config(
 )
 
 DATA_FILE = "عروض المؤتمر 2026.xlsx"
-GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz7dTqGUw95xDV2rVX6FbbcZM7H_LaJ-T83b1iYWYqrJ-Kq36gcFj3zD-kd-28jhsga/exec"
+GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzNnX--BElICEiGzpUV0mXC-9B1EM5NItWfvoGjV9AMVlZ1oeir39IlhAd_yvaLyCBR/exec"
+
+USERS = {
+    "Manar": "123",
+    "Ruba": "0123",
+    "Alaa": "1234"
+}
 
 st.markdown("""
 <style>
-html, body, [class*="css"] {
+html, body {
     direction: rtl;
     text-align: right;
 }
-.block-container {
-    padding-top: 2rem;
-}
-.offer-box {
+
+.summary-box {
     background: #ffffff;
-    border: 1px solid #e5e7eb;
+    color: #111827;
     border-radius: 18px;
-    padding: 20px;
-    margin-bottom: 16px;
-    box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+    padding: 18px;
+    border: 2px solid #2563eb;
+    text-align: center;
+    font-weight: 900;
+    margin-bottom: 18px;
 }
-.title {
-    font-size: 34px;
-    font-weight: 800;
-    color: #0f172a;
+
+.summary-title {
+    font-size: 18px;
+    color: #2563eb;
+    margin-bottom: 8px;
 }
-.subtitle {
-    font-size: 17px;
-    color: #475569;
-    margin-bottom: 20px;
+
+.summary-value {
+    font-size: 28px;
+    color: #111827;
+}
+
+.custom-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    border: 2px solid #9ca3af;
+}
+
+.custom-table th {
+    background: #2563eb;
+    color: white;
+    font-size: 22px;
+    font-weight: 900;
+    padding: 15px;
+    text-align: center;
+}
+
+.custom-table td {
+    font-size: 21px;
+    font-weight: 900;
+    padding: 15px;
+    text-align: center;
+    border: 1px solid #cbd5e1;
+    color: #111827;
+}
+
+.custom-table tr:nth-child(even) td {
+    background: #ffffff;
+}
+
+.custom-table tr:nth-child(odd) td {
+    background: #e5e7eb;
 }
 </style>
 """, unsafe_allow_html=True)
+
 
 @st.cache_data
 def load_data():
@@ -48,42 +88,112 @@ def load_data():
     df.columns = df.columns.astype(str).str.strip().str.lower().str.replace(" ", "_")
     df = df.dropna(how="all")
 
-    required = ["offer_type", "offer_group"]
-    missing = [c for c in required if c not in df.columns]
-    if missing:
-        st.error(f"الأعمدة الناقصة من ملف الإكسل: {missing}")
-        st.stop()
+    df["offer_type"] = df["offer_type"].astype(str).fillna("").str.strip()
+    df["offer_group"] = df["offer_group"].astype(str).fillna("").str.strip()
 
-    df["offer_type"] = df["offer_type"].astype(str).str.strip()
-    df["offer_group"] = df["offer_group"].astype(str).str.strip()
     return df
+
+
+def clean(x):
+    if pd.isna(x) or str(x).lower() in ["none", "nan", "nat", ""]:
+        return ""
+    return x
+
+
+def format_value(x, col_name=""):
+    x = clean(x)
+
+    if x == "":
+        return ""
+
+    if isinstance(x, (int, float)):
+        if "حسم" in col_name or "discount" in col_name or "نسبة" in col_name:
+            if 0 < x <= 1:
+                return f"{x:.0%}"
+            return f"{x}%"
+
+        if float(x).is_integer():
+            if abs(x) >= 1000:
+                return f"{x:,.0f}"
+            return f"{x:.0f}"
+
+        return f"{x:,.2f}"
+
+    return str(x)
+
+
+def is_summary_row(row):
+    text_cols = ["العرض_و_الحسم", "product", "المستحضر", "الصنف"]
+    has_product_text = False
+
+    for col in text_cols:
+        if col in row.index:
+            value = clean(row[col])
+            if value != "" and not isinstance(value, (int, float)):
+                has_product_text = True
+
+    return not has_product_text
+
+
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
+if "employee" not in st.session_state:
+    st.session_state.employee = ""
+
+if not st.session_state.logged_in:
+    st.title("🔐 تسجيل الدخول")
+
+    username = st.selectbox("اسم الموظف", list(USERS.keys()))
+    password = st.text_input("كلمة المرور", type="password")
+
+    if st.button("دخول", use_container_width=True):
+        if USERS.get(username) == password:
+            st.session_state.logged_in = True
+            st.session_state.employee = username
+            st.rerun()
+        else:
+            st.error("بيانات الدخول غير صحيحة")
+
+    st.stop()
+
 
 df = load_data()
 
 if "page" not in st.session_state:
     st.session_state.page = "filters"
 
-# =========================
-# شاشة اختيار العرض
-# =========================
+if st.button("🔄 تحديث البيانات"):
+    st.cache_data.clear()
+    st.rerun()
+
+st.write(f"👤 الموظف الحالي: **{st.session_state.employee}**")
+
+if st.button("تسجيل خروج"):
+    st.session_state.logged_in = False
+    st.session_state.employee = ""
+    st.session_state.page = "filters"
+    st.rerun()
+
+
 if st.session_state.page == "filters":
-    st.markdown('<div class="title">💊 نظام عروض مؤتمر الصيادلة</div>', unsafe_allow_html=True)
-    st.markdown('<div class="subtitle">اختر نوع العرض ثم مجموعة العرض لعرض التفاصيل</div>', unsafe_allow_html=True)
+
+    st.title("💊 نظام عروض مؤتمر الصيادلة")
 
     col1, col2 = st.columns(2)
 
     with col1:
         offer_type = st.selectbox(
-            "اختر نوع العرض",
-            sorted(df["offer_type"].dropna().unique())
+            "نوع العرض",
+            sorted([x for x in df["offer_type"].unique() if x != ""])
         )
 
-    filtered_type = df[df["offer_type"] == offer_type]
+    filtered = df[df["offer_type"] == offer_type]
 
     with col2:
         offer_group = st.selectbox(
-            "اختر مجموعة العرض",
-            sorted(filtered_type["offer_group"].dropna().unique())
+            "مجموعة العرض",
+            sorted([x for x in filtered["offer_group"].unique() if x != ""])
         )
 
     if st.button("عرض التفاصيل", use_container_width=True):
@@ -92,10 +202,9 @@ if st.session_state.page == "filters":
         st.session_state.page = "details"
         st.rerun()
 
-# =========================
-# شاشة تفاصيل العرض
-# =========================
-elif st.session_state.page == "details":
+
+else:
+
     selected_type = st.session_state.selected_type
     selected_group = st.session_state.selected_group
 
@@ -104,50 +213,110 @@ elif st.session_state.page == "details":
         (df["offer_group"] == selected_group)
     ].copy()
 
-    top1, top2 = st.columns([1, 4])
+    result = result.fillna("")
+    result = result.loc[:, ~result.columns.str.contains("unnamed", case=False)]
 
-    with top1:
-        if st.button("⬅️ رجوع للخيارات", use_container_width=True):
-            st.session_state.page = "filters"
-            st.rerun()
+    st.subheader(f"💊 {selected_type} / {selected_group}")
 
-    with top2:
-        st.markdown(f'<div class="title">تفاصيل العرض: {selected_type} / {selected_group}</div>', unsafe_allow_html=True)
+    if st.button("⬅️ رجوع"):
+        st.session_state.page = "filters"
+        st.rerun()
 
     st.divider()
 
-    show_cols = [c for c in result.columns if c not in ["id"]]
+    # =========================
+    # ملخص القيم المالية
+    # =========================
+    summary_row = result.iloc[0]
 
-    st.dataframe(
-        result[show_cols],
-        use_container_width=True,
-        hide_index=True
-    )
+    summary_items = []
+
+    for col in result.columns:
+        if col in ["offer_type", "offer_group"]:
+            continue
+
+        value = clean(summary_row[col])
+
+        if value != "":
+            summary_items.append((col, format_value(value, col)))
+
+    if summary_items:
+        st.markdown("### 💰 ملخص العرض")
+
+        cols = st.columns(min(len(summary_items), 4))
+
+        for i, (label, value) in enumerate(summary_items):
+            with cols[i % len(cols)]:
+                st.markdown(f"""
+                <div class="summary-box">
+                    <div class="summary-title">{label}</div>
+                    <div class="summary-value">{value}</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+    # =========================
+    # جدول التفاصيل
+    # =========================
+    table_result = result.copy()
+
+    if len(table_result) > 1 and is_summary_row(table_result.iloc[0]):
+        table_result = table_result.iloc[1:].copy()
+
+    table_result = table_result.drop(columns=["offer_type", "offer_group"], errors="ignore")
+
+    headers = table_result.columns.tolist()
+    rows_html = ""
+
+    for _, row in table_result.iterrows():
+        row_html = "<tr>"
+        for col in headers:
+            value = format_value(row[col], col)
+            row_html += f"<td>{value}</td>"
+        row_html += "</tr>"
+        rows_html += row_html
+
+    table_html = f"""
+<table class="custom-table">
+<thead>
+<tr>
+{''.join([f"<th>{col}</th>" for col in headers])}
+</tr>
+</thead>
+<tbody>
+{rows_html}
+</tbody>
+</table>
+"""
+
+    st.markdown(table_html, unsafe_allow_html=True)
 
     st.divider()
     st.subheader("تثبيت العرض")
 
-    with st.form("confirm_offer_form"):
+    with st.form("form"):
         c1, c2, c3 = st.columns(3)
 
         with c1:
-            doctor_name = st.text_input("اسم الصيدلي / الدكتور")
+            doctor = st.text_input("اسم الدكتور / الصيدلي")
+
         with c2:
-            pharmacy_name = st.text_input("اسم الصيدلية")
+            address = st.text_input("العنوان")
+
         with c3:
             phone = st.text_input("رقم الهاتف")
 
-        notes = st.text_area("ملاحظات", height=80)
+        notes = st.text_area("ملاحظات")
 
-        submitted = st.form_submit_button("✅ تثبيت العرض", use_container_width=True)
+        submit = st.form_submit_button("تثبيت", use_container_width=True)
 
-        if submitted:
-            if not doctor_name and not pharmacy_name:
-                st.warning("يرجى إدخال اسم الصيدلي/الدكتور أو اسم الصيدلية.")
+        if submit:
+            if doctor == "" and address == "":
+                st.warning("أدخل اسم أو عنوان")
             else:
                 payload = {
-                    "doctor_name": doctor_name,
-                    "pharmacy_name": pharmacy_name,
+                    "employee_name": st.session_state.employee,
+                    "doctor_name": doctor,
+                    "pharmacy_name": address,
                     "phone": phone,
                     "offer_type": selected_type,
                     "offer_group": selected_group,
@@ -155,12 +324,10 @@ elif st.session_state.page == "details":
                 }
 
                 try:
-                    response = requests.post(GOOGLE_SCRIPT_URL, json=payload, timeout=15)
-
-                    if response.status_code == 200:
-                        st.success("تم تثبيت العرض وحفظه في Google Sheet بنجاح ✅")
+                    r = requests.post(GOOGLE_SCRIPT_URL, json=payload, timeout=15)
+                    if r.status_code == 200:
+                        st.success(f"تم الحفظ باسم الموظف {st.session_state.employee} ✅")
                     else:
-                        st.error(f"صار خطأ بالحفظ. Status code: {response.status_code}")
-
+                        st.error("خطأ بالحفظ")
                 except Exception as e:
-                    st.error(f"تعذر الاتصال بـ Google Sheet: {e}")
+                    st.error(f"فشل الاتصال: {e}")
